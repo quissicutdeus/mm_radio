@@ -1,0 +1,65 @@
+# Downstream fork check. This fork exists only to carry pnpm's build-approval
+# state (see the commit that added web/pnpm-workspace.yaml), so what is worth
+# verifying is that the project still installs and builds with the approvals
+# committed -- most likely to break on a merge from upstream.
+name: Verify
+
+on:
+  push:
+    branches: [fivem]
+  pull_request:
+
+jobs:
+  build:
+    name: Build web
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Matched to the machine that consumes this fork. pnpm is the half that
+        # matters: pnpm 11 is what wrote the committed allowBuilds file, and an
+        # older pnpm does not know that key -- it would re-prompt for approval
+        # and fail the install below with ERR_PNPM_IGNORED_BUILDS.
+        node-version: [26]
+        pnpm-version: [11]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install pnpm ${{ matrix.pnpm-version }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ matrix.pnpm-version }}
+
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: web
+        # No --frozen-lockfile here: upstream commits both a pnpm-lock.yaml and
+        # a stale package-lock.json, and the pnpm lockfile is not always in step
+        # with package.json. Failing CI on upstream's lockfile drift would say
+        # nothing about whether this fork works.
+        run: pnpm install
+
+      - name: Verify the build approvals actually took
+        # The whole point of committing pnpm-workspace.yaml: without the
+        # allowBuilds entries pnpm skips the dependency build scripts and exits
+        # non-zero with ERR_PNPM_IGNORED_BUILDS. A clean install above is the
+        # assertion; this makes the reason legible in the log.
+        working-directory: web
+        run: |
+          set -eu
+          echo "committed build approvals:"; cat pnpm-workspace.yaml
+          test -d node_modules || { echo "::error::no node_modules"; exit 1; }
+
+      - name: Build
+        working-directory: web
+        # Not every one of these resources ships a build script; skip rather
+        # than fail when there is nothing to build.
+        run: |
+          set -eu
+          if pnpm run 2>/dev/null | grep -qE '^ +build'; then pnpm run build; else echo "no build script -- install-only project"; fi
