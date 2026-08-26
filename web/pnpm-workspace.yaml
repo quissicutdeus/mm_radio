@@ -1,3 +1,15 @@
+# packages: is here for pnpm 9 and older, which treat the mere presence of
+# this file as a workspace root and abort with "packages field missing or
+# empty" without it. '.' declares the only package there is -- this directory
+# -- so the declaration is true rather than a placeholder, and the file stays
+# usable on every pnpm version instead of only the one that wrote it.
+packages:
+  - '.'
+
+# pnpm 10+ will not run a dependency's install scripts until they are approved,
+# and stores that approval here. Without it `pnpm run build` fails its deps
+# check with ERR_PNPM_IGNORED_BUILDS, and pnpm rewrites this file on every
+# install -- so it belongs in the repo rather than in each machine's tree.
 allowBuilds:
   esbuild: true
   svelte-preprocess: true
