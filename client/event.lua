@@ -51,7 +51,7 @@ end)
 
 RegisterNetEvent('mm_radio:client:usejammer', function()
     if not Shared.Jammer.permission or not (lib.table.contains(Shared.Jammer.permission, Radio.PlayerJob) or lib.table.contains(Shared.Jammer.permission, Radio.PlayerGang)) then
-        lib.notify({
+        return lib.notify({
             title = 'You dont have permission to use this item',
             type = 'error'
         })
@@ -240,9 +240,12 @@ RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
 end)
 
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function(job)
-    local player = QBX.PlayerData
-    player.job = job
-    Radio:Init(player)
+    Radio:Init({
+        cid = QBX.PlayerData.cid,
+        job = job,
+        gang = QBX.PlayerData.gang,
+        charinfo = QBX.PlayerData.charinfo
+    })
 end)
 
 RegisterNetEvent('QBCore:Player:SetPlayerData', function(val)
@@ -257,9 +260,12 @@ RegisterNetEvent('QBCore:Player:SetPlayerData', function(val)
 end)
 
 RegisterNetEvent('QBCore:Client:OnGangUpdate', function(gang)
-    local player = QBX.PlayerData
-    player.gang = gang
-    Radio:Init(player)
+    Radio:Init({
+        cid = QBX.PlayerData.cid,
+        job = QBX.PlayerData.job,
+        gang = gang,
+        charinfo = QBX.PlayerData.charinfo
+    })
 end)
 
 RegisterNetEvent("QBCore:Client:SetDuty", function(newDuty)
